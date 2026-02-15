@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+
+  # -----------------------------------------------------------------------
+  # OCR batch processor — processes documents from ./documents → ./results
+  # -----------------------------------------------------------------------
+  ocr-processor:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    image: vision-ocr:latest
+    container_name: vision-ocr-processor
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json
+      - MAX_WORKERS=10
+      - LANGUAGE_HINT=en
+    volumes:
+      - ../documents:/input:ro
+      - ../results:/output
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/service-account.json:ro
+    restart: "no"
+
+  # -----------------------------------------------------------------------
+  # API service — exposes REST endpoint for on-demand OCR
+  # -----------------------------------------------------------------------
+  ocr-api:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    image: vision-ocr:latest
+    container_name: vision-ocr-api
+    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      - "8080:8080"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/service-account.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # -----------------------------------------------------------------------
+  # Local development — mounts source for live-reload
+  # -----------------------------------------------------------------------
+  ocr-dev:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    image: vision-ocr:latest
+    container_name: vision-ocr-dev
+    command: ["python", "src/ocr.py", "samples/invoice.jpg"]
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json
+    volumes:
+      - ../src:/app/src
+      - ../samples:/app/samples
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/service-account.json:ro
+    profiles:
+      - dev
+
+volumes:
+  results:
+  documents:

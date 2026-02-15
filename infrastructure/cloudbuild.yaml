@@ -1,0 +1,47 @@
+steps:
+  # Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/vision-ocr:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/vision-ocr:latest'
+      - '-f'
+      - 'infrastructure/Dockerfile'
+      - '.'
+
+  # Push versioned image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/vision-ocr:$SHORT_SHA'
+
+  # Push latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/vision-ocr:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'vision-ocr-service'
+      - '--image=gcr.io/$PROJECT_ID/vision-ocr:$SHORT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--service-account=vision-ocr-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--concurrency=80'
+      - '--max-instances=10'
+
+images:
+  - 'gcr.io/$PROJECT_ID/vision-ocr:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/vision-ocr:latest'
+
+timeout: '1200s'

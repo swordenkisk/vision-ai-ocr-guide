@@ -1,0 +1,20 @@
+# Core Google Cloud libraries
+google-cloud-vision==3.7.2
+google-cloud-storage==2.16.0
+google-cloud-bigquery==3.20.0
+google-cloud-documentai==2.24.0
+
+# Utilities
+Pillow==10.3.0          # Image pre-processing helpers
+pdf2image==1.17.0        # PDF page rendering (requires poppler-utils)
+tqdm==4.66.4             # Progress bars for batch processing
+
+# API server (optional, for Cloud Run REST endpoint)
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Development & testing
+pytest==8.2.0
+pytest-mock==3.14.0
+black==24.4.2
+ruff==0.4.4
